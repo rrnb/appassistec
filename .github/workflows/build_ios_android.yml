@@ -22,17 +22,20 @@ jobs:
       - name: Precache artefatos iOS
         run: flutter precache --ios
 
-      - name: Gerar arquivos nativos iOS
+      - name: Limpar e Recriar arquivos nativos iOS e dependências
         working-directory: ./mobile
-        run: flutter create --org br.com.assistec --platforms=ios .
-
-      - name: Instalar Dependências Flutter
-        working-directory: ./mobile
-        run: flutter pub get
-
-      - name: Instalar CocoaPods e Sincronizar Podfile.lock
-        working-directory: ./mobile/ios
         run: |
+          echo "Removendo pasta ios antiga..."
+          rm -rf ios
+          
+          echo "Recriando plataforma iOS..."
+          flutter create . --org br.com.assistec --platforms=ios
+          
+          echo "Baixando dependências do Dart..."
+          flutter pub get
+          
+          echo "Executando pod install..."
+          cd ios
           pod install --repo-update || pod install
 
       - name: Compilar iOS (sem assinatura para teste)
