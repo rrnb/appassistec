@@ -27,5 +27,6 @@ teste.php
 .idea/
 Thumbs.db
 .DS_Store
+workflow.json
 node_modules/
 desktop/
