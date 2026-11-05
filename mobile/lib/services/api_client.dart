@@ -12,7 +12,7 @@ class ApiClient {
   // Exemplo emulador Android: 'http://10.0.2.2/assistec/desktop/api'
   // Exemplo iOS Simulator / Mac: 'http://localhost/assistec/desktop/api'
   // Exemplo rede Wi-Fi local: 'http://192.168.1.100/assistec/desktop/api'
-  static String baseUrl = 'http://10.0.2.2/assistec/desktop/api';
+  static String baseUrl = 'https://portal.assistecpa.com.br/api';
 
   static void setBaseUrl(String url) {
     baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
@@ -126,6 +126,32 @@ class ApiClient {
         'offline': true,
         'message': 'Sem conexão. OS guardada no dispositivo para sincronização automática posterior.'
       };
+    }
+  }
+
+  static Future<bool> salvarChecklistDirect(Map<String, dynamic> payload) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/checklist.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 10));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> salvarOrdemDirect(Map<String, dynamic> payload) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/ordens.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 10));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 }

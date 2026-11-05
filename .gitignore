@@ -5,6 +5,7 @@
 *.pem
 *.key
 *.cert
+.gitignore
 
 # Database Dumps & SQL files with real data
 *.sql

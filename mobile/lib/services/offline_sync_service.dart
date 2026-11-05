@@ -97,14 +97,3 @@ class OfflineSyncService {
     return [];
   }
 }
-
-// Extensões de sincronização direta
-extension ApiClientDirect on ApiClient {
-  static Future<bool> salvarChecklistDirect(Map<String, dynamic> payload) async {
-    return true;
-  }
-
-  static Future<bool> salvarOrdemDirect(Map<String, dynamic> payload) async {
-    return true;
-  }
-}
