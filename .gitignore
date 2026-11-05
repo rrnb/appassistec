@@ -1,0 +1,30 @@
+# Secrets & Credentials
+.env
+.env.*
+.virgo-ftp.json
+*.pem
+*.key
+*.cert
+
+# Database Dumps & SQL files with real data
+*.sql
+*.sqlite
+
+# Temporary & Local Backup Files
+.tmp/
+* - Copia/
+*.bak
+*.old
+*.log
+assistec_mobile.md
+GOOGLE_STUDIO_MOBILE_APK.md
+index.php
+teste.php
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+node_modules/
+desktop/
