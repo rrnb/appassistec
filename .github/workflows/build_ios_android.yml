@@ -40,7 +40,7 @@ jobs:
       - name: Validar estrutura do projeto
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           test -f pubspec.yaml || { echo "pubspec.yaml não encontrado"; exit 1; }
           flutter --version
           flutter doctor -v
@@ -48,50 +48,67 @@ jobs:
       - name: Instalar dependências do Flutter
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           flutter pub get
 
       - name: Preparar projeto iOS
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           flutter precache --ios
 
           if [ ! -f ios/Podfile ]; then
-            echo "Podfile não encontrado. Gerando estrutura iOS..."
-            flutter create --platforms=ios --org br.com.assistec --project-name appassistec --overwrite .
+            echo "Podfile ausente; recriando o scaffold iOS incompleto."
+
+            if [ -f ios/Runner/Info.plist ]; then
+              cp ios/Runner/Info.plist "$RUNNER_TEMP/Assistec-Info.plist"
+            fi
+
+            rm -rf ios
+            flutter create \
+              --platforms=ios \
+              --org br.com.assistec \
+              --project-name mobile \
+              .
+
+            if [ -f "$RUNNER_TEMP/Assistec-Info.plist" ]; then
+              cp "$RUNNER_TEMP/Assistec-Info.plist" ios/Runner/Info.plist
+            fi
           fi
 
           if [ ! -f ios/Podfile ]; then
-            echo "Erro: ios/Podfile não foi gerado em $(pwd)."
-            find ios -maxdepth 2 -type f -print 2>/dev/null || true
+            echo "Erro: ios/Podfile continua ausente após gerar o scaffold iOS."
+            find ios -maxdepth 3 -type f -print 2>/dev/null || true
             exit 1
           fi
 
+          flutter pub get
           cd ios
           pod install --repo-update
 
       - name: Compilar iOS (sem assinatura para teste)
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           flutter build ios --release --no-codesign
 
       - name: Empacotar artefatos iOS
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload/
+          cp -R build/ios/iphoneos/Runner.app Payload/
           zip -r Assistec-iOS.ipa Payload
-          cd build/ios/iphoneos
-          zip -r Runner.zip Runner.app
-          mv Runner.zip ../../
+          (
+            cd build/ios/iphoneos
+            zip -r "$RUNNER_TEMP/Runner.zip" Runner.app
+          )
+          mv "$RUNNER_TEMP/Runner.zip" Runner.zip
 
       - name: Compilar Android (APK release)
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           flutter build apk --release
 
       - name: Upload dos artefatos
