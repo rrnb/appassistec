@@ -54,6 +54,13 @@ jobs:
       - name: Preparar projeto iOS
         shell: bash
         run: |
+          cd mobile
+          # Back up ios/ first if it contains custom native configuration.
+          rm -rf ios
+          flutter create --platforms=ios --org br.com.assistec --project-name appassistec .
+          test -f ios/Podfile
+          git add ios
+          git commit -m "Add generated iOS project files"
           set -e
           flutter precache --ios
 
