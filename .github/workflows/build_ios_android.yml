@@ -8,18 +8,12 @@ on:
 
 jobs:
   build_ios_android:
-    name: Compilar App iOS e Android
+    name: Compilar App iOS
     runs-on: macos-latest
 
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
-
-      - name: Configurar Java (necessário para o Android)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
 
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
@@ -28,16 +22,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Precache artefatos iOS e Android
-        run: flutter precache --ios --android
+      - name: Precache artefatos iOS
+        run: flutter precache --ios
 
       - name: Limpar e Recriar arquivos nativos iOS e dependências
         run: |
-          echo "Removendo pastas nativas antigas..."
-          rm -rf ios android
+          echo "Removendo pasta ios antiga..."
+          rm -rf ios
           
-          echo "Recriando plataformas nativas (iOS e Android)..."
-          flutter create . --org br.com.assistec --platforms=ios,android
+          echo "Recriando plataforma nativa do iOS..."
+          flutter create . --org br.com.assistec --platforms=ios
           
           echo "Baixando dependências do Dart..."
           flutter pub get
@@ -61,14 +55,10 @@ jobs:
           zip -r Assistec-iOS.ipa Payload
           cd build/ios/iphoneos && zip -r Runner.zip Runner.app && mv Runner.zip ../../
 
-      - name: Compilar Android (APK)
-        run: flutter build apk --release
-
-      - name: Upload dos Artefatos (iOS e Android)
+      - name: Upload dos Artefatos iOS
         uses: actions/upload-artifact@v4
         with:
-          name: assistec-mobile-artifacts
+          name: assistec-mobile-ios-artifacts
           path: |
             Assistec-iOS.ipa
             Runner.zip
-            build/app/outputs/flutter-apk/app-release.apk
