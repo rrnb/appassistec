@@ -28,15 +28,25 @@ jobs:
           echo "Removendo pasta ios antiga..."
           rm -rf ios
           
-          echo "Recriando plataforma iOS..."
+          echo "Recriando plataforma iOS limpa..."
           flutter create . --org br.com.assistec --platforms=ios
           
+          echo "Adicionando permissões de câmera e fotos no Info.plist..."
+          plutil -insert NSCameraUsageDescription -string "O Assistec precisa da câmera para fotos de vistorias e lacres." ios/Runner/Info.plist || true
+          plutil -insert NSPhotoLibraryUsageDescription -string "Acesso à galeria para anexar fotos de evidências." ios/Runner/Info.plist || true
+
           echo "Baixando dependências do Dart..."
           flutter pub get
           
-          echo "Executando pod install..."
-          cd ios
-          pod install --repo-update || pod install
+          echo "Gerando Podfile e configurando CocoaPods..."
+          flutter build ios --config-only
+          
+          if [ -f "ios/Podfile" ]; then
+            echo "Executando pod install para sincronizar sandbox..."
+            cd ios
+            pod install
+            cd ..
+          fi
 
       - name: Compilar iOS (sem assinatura para teste)
         working-directory: ./mobile
