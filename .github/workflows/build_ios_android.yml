@@ -98,11 +98,12 @@ jobs:
           )
           mv "$RUNNER_TEMP/Runner.zip" Runner.zip
 
-      - name: Upload dos artefatos iOS
+      - name: Upload dos artefatos
         uses: actions/upload-artifact@v4
         with:
-          name: assistec-ios-build-artifacts
+          name: assistec-mobile-build-artifacts
           path: |
-            Assistec-iOS.ipa
-            Runner.zip
+            mobile/Assistec-iOS.ipa
+            mobile/Runner.zip
+            mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
