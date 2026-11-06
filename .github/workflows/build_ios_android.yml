@@ -12,6 +12,9 @@ jobs:
     name: Compilar App Flutter
     runs-on: macos-15
     timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
 
     env:
       FLUTTER_VERSION: "3.24.5"
