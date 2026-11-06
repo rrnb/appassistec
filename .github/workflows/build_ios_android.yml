@@ -2,65 +2,101 @@ name: Build iOS and Android
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
+  workflow_dispatch:
 
 jobs:
-  build_ios_android:
-    name: Compilar App iOS
-    runs-on: macos-latest
+  build_flutter:
+    name: Compilar App Flutter
+    runs-on: macos-14
+    timeout-minutes: 90
+
+    env:
+      FLUTTER_VERSION: "3.24.5"
+      JAVA_VERSION: "17"
 
     steps:
-      - name: Checkout do Código
+      - name: Checkout do código
         uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
-          channel: 'stable'
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
           cache: true
 
-      - name: Precache artefatos iOS
-        run: flutter precache --ios
+      - name: Validar estrutura do projeto
+        shell: bash
+        run: |
+          set -e
+          test -f pubspec.yaml || { echo "pubspec.yaml não encontrado"; exit 1; }
+          flutter --version
+          flutter doctor -v
 
-       - name: Limpar e Recriar arquivos nativos iOS e dependências
-         run: |
-              test -f pubspec.yaml || { echo "pubspec.yaml não encontrado; confira o diretório de trabalho"; exit 1; }
-          
-              flutter create --platforms=ios --org br.com.assistec .
-          
-              flutter pub get
-          
-              test -f ios/Podfile || {
-                echo "flutter create não gerou ios/Podfile"
-                ls -la ios || true
-                exit 1
-              }
-          
-              test -f ios/Flutter/Generated.xcconfig || {
-                echo "ios/Flutter/Generated.xcconfig não foi gerado"
-                exit 1
-              }
-          
-              cd ios
-              pod install --repo-update
+      - name: Instalar dependências do Flutter
+        shell: bash
+        run: |
+          set -e
+          flutter pub get
+
+      - name: Preparar projeto iOS
+        shell: bash
+        run: |
+          set -e
+          flutter precache --ios
+
+          if [ ! -f ios/Podfile ]; then
+            echo "Podfile não encontrado. Gerando estrutura iOS..."
+            flutter create --platforms=ios --org br.com.assistec . --overwrite
+          fi
+
+          if [ ! -f ios/Podfile ]; then
+            echo "Erro: ios/Podfile ainda não foi gerado."
+            ls -la ios || true
+            exit 1
+          fi
+
+          cd ios
+          pod install --repo-update
 
       - name: Compilar iOS (sem assinatura para teste)
-        run: flutter build ios --release --no-codesign
-
-      - name: Empacotar IPA e ZIP para Sideload no iPhone
+        shell: bash
         run: |
+          set -e
+          flutter build ios --release --no-codesign
+
+      - name: Empacotar artefatos iOS
+        shell: bash
+        run: |
+          set -e
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r Assistec-iOS.ipa Payload
-          cd build/ios/iphoneos && zip -r Runner.zip Runner.app && mv Runner.zip ../../
+          cd build/ios/iphoneos
+          zip -r Runner.zip Runner.app
+          mv Runner.zip ../../
 
-      - name: Upload dos Artefatos iOS
+      - name: Compilar Android (APK release)
+        shell: bash
+        run: |
+          set -e
+          flutter build apk --release
+
+      - name: Upload dos artefatos
         uses: actions/upload-artifact@v4
         with:
-          name: assistec-mobile-ios-artifacts
+          name: assistec-mobile-build-artifacts
           path: |
             Assistec-iOS.ipa
             Runner.zip
+            build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
