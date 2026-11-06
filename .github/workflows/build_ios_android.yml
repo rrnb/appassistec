@@ -1,69 +1,74 @@
-name: Build iOS (Assistec Mobile)
+name: Build iOS and Android
 
 on:
   push:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
-  build-ios:
-    name: Compilar App iOS (macOS Runner)
+  build_ios_android:
+    name: Compilar App iOS e Android
     runs-on: macos-latest
+
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
+      - name: Configurar Java (necessário para o Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.x'
           channel: 'stable'
           cache: true
 
-      - name: Precache artefatos iOS
-        run: flutter precache --ios
+      - name: Precache artefatos iOS e Android
+        run: flutter precache --ios --android
 
       - name: Limpar e Recriar arquivos nativos iOS e dependências
-        working-directory: ./mobile
         run: |
-          echo "Removendo pasta ios antiga..."
-          rm -rf ios
+          echo "Removendo pastas nativas antigas..."
+          rm -rf ios android
           
-          echo "Recriando plataforma iOS limpa..."
-          flutter create . --org br.com.assistec --platforms=ios
+          echo "Recriando plataformas nativas (iOS e Android)..."
+          flutter create . --org br.com.assistec --platforms=ios,android
           
-          echo "Adicionando permissões de câmera e fotos no Info.plist..."
-          plutil -insert NSCameraUsageDescription -string "O Assistec precisa da câmera para fotos de vistorias e lacres." ios/Runner/Info.plist || true
-          plutil -insert NSPhotoLibraryUsageDescription -string "Acesso à galeria para anexar fotos de evidências." ios/Runner/Info.plist || true
-
           echo "Baixando dependências do Dart..."
           flutter pub get
           
           echo "Gerando Podfile e configurando CocoaPods sem checagem de assinatura..."
-          flutter build ios --config-only --no-codesign
+          cd ios
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development";/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
+          pod install --repo-update || pod install
           
-          if [ -f "ios/Podfile" ]; then
-            echo "Executando pod install para sincronizar sandbox..."
-            cd ios
-            pod install
-            cd ..
-          fi
+          # IMPORTANTE: Volta para a raiz do projeto para o próximo passo achar o pubspec.yaml
+          cd ..
 
       - name: Compilar iOS (sem assinatura para teste)
-        working-directory: ./mobile
         run: flutter build ios --release --no-codesign
 
-      - name: Empacotar IPA para Sideload / Instalação no iPhone
-        working-directory: ./mobile
+      - name: Empacotar IPA e ZIP para Sideload no iPhone
         run: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r Assistec-iOS.ipa Payload
           cd build/ios/iphoneos && zip -r Runner.zip Runner.app && mv Runner.zip ../../
 
-      - name: Upload iOS App e IPA como Artefatos
+      - name: Compilar Android (APK)
+        run: flutter build apk --release
+
+      - name: Upload dos Artefatos (iOS e Android)
         uses: actions/upload-artifact@v4
         with:
-          name: assistec-mobile-ios-app
+          name: assistec-mobile-artifacts
           path: |
-            mobile/Assistec-iOS.ipa
-            mobile/Runner.zip
+            Assistec-iOS.ipa
+            Runner.zip
+            build/app/outputs/flutter-apk/app-release.apk
