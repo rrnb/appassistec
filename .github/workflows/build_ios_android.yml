@@ -54,24 +54,17 @@ jobs:
       - name: Preparar projeto iOS
         shell: bash
         run: |
-          cd mobile
-          # Back up ios/ first if it contains custom native configuration.
-          rm -rf ios
-          flutter create --platforms=ios --org br.com.assistec --project-name appassistec .
-          test -f ios/Podfile
-          git add ios
-          git commit -m "Add generated iOS project files"
           set -e
           flutter precache --ios
 
           if [ ! -f ios/Podfile ]; then
             echo "Podfile não encontrado. Gerando estrutura iOS..."
-            flutter create --platforms=ios --org br.com.assistec . --overwrite
+            flutter create --platforms=ios --org br.com.assistec --project-name appassistec --overwrite .
           fi
 
           if [ ! -f ios/Podfile ]; then
-            echo "Erro: ios/Podfile ainda não foi gerado."
-            ls -la ios || true
+            echo "Erro: ios/Podfile não foi gerado em $(pwd)."
+            find ios -maxdepth 2 -type f -print 2>/dev/null || true
             exit 1
           fi
 
