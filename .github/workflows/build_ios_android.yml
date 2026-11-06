@@ -25,25 +25,27 @@ jobs:
       - name: Precache artefatos iOS
         run: flutter precache --ios
 
-      - name: Limpar e Recriar arquivos nativos iOS e dependências
-        run: |
-          echo "Removendo pasta ios antiga..."
-          rm -rf ios
+       - name: Limpar e Recriar arquivos nativos iOS e dependências
+         run: |
+              test -f pubspec.yaml || { echo "pubspec.yaml não encontrado; confira o diretório de trabalho"; exit 1; }
           
-          echo "Recriando plataforma nativa do iOS..."
-          flutter create . --org br.com.assistec --platforms=ios
+              flutter create --platforms=ios --org br.com.assistec .
           
-          echo "Baixando dependências do Dart..."
-          flutter pub get
+              flutter pub get
           
-          echo "Gerando Podfile e configurando CocoaPods sem checagem de assinatura..."
-          cd ios
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development";/CODE_SIGN_IDENTITY = "";/g' Runner.xcodeproj/project.pbxproj
-          pod install --repo-update || pod install
+              test -f ios/Podfile || {
+                echo "flutter create não gerou ios/Podfile"
+                ls -la ios || true
+                exit 1
+              }
           
-          # IMPORTANTE: Volta para a raiz do projeto para o próximo passo achar o pubspec.yaml
-          cd ..
+              test -f ios/Flutter/Generated.xcconfig || {
+                echo "ios/Flutter/Generated.xcconfig não foi gerado"
+                exit 1
+              }
+          
+              cd ios
+              pod install --repo-update
 
       - name: Compilar iOS (sem assinatura para teste)
         run: flutter build ios --release --no-codesign
